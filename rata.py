@@ -1,55 +1,73 @@
 import streamlit as st
-from textblob import TextBlob
-import nltk
+import urllib.request
+import urllib.parse
+import json
 
-# Memastikan kamus bahasa terunduh dengan aman di server cloud
-try:
-    nltk.data.find('corpora/wordnet')
-except LookupError:
-    nltk.download('wordnet')
+# Set halaman web agar rapi dan responsif
+st.set_page_config(page_title="Penerjemah Ruang Vektor", layout="wide")
 
-# ==========================================
-# DESAIN MODEL GOOGLE TRANSLATE
-# ==========================================
-st.set_page_config(page_title="Google Translate - Vektor Raksasa", layout="centered")
-
-st.title("🌐 Ruang Vektor Translate (Ketik Bebas)")
-st.write("Simulasi Penerjemah Otomatis Tugas Akhir — Mendukung Banyak Kata & Kalimat")
+st.title("🌐 Ruang Vektor Translate")
+st.write("Aplikasi Penerjemah Otomatis — Tugas Akhir Aljabar Linear Terapan")
 st.write("---")
 
-# Membuat 2 kolom berdampingan mirip Google Translate
-kolom_kiri, kolom_kanan = st.columns(2)
+# Menggunakan session state agar pilihan bahasa bisa diingat dan ditukar dengan lancar
+if 'bahasa_asal' not in st.session_state:
+    st.session_state.bahasa_asal = "Indonesia"
 
-with kolom_kiri:
-    st.caption("Bahasa Indonesia (Ketik di sini)")
-    kata_input = st.text_input(
-        "Masukkan kata/kalimat:", 
-        value="selamat pagi",
-        label_visibility="collapsed"
+# Tombol untuk menukar arah bahasa secara instan (Fitur Google Translate)
+if st.button("🔄 Tukar Arah Bahasa"):
+    if st.session_state.bahasa_asal == "Indonesia":
+        st.session_state.bahasa_asal = "Inggris"
+    else:
+        st.session_state.bahasa_asal = "Indonesia"
+
+# Menentukan komponen bahasa berdasarkan pilihan saat ini
+if st.session_state.bahasa_asal == "Indonesia":
+    label_asal = "Indonesia"
+    label_tujuan = "Inggris"
+    sl = "id"
+    tl = "en"
+    contoh_teks = "Selamat pagi, mari belajar Aljabar Linear bersama."
+else:
+    label_asal = "Inggris"
+    label_tujuan = "Indonesia"
+    sl = "en"
+    tl = "id"
+    contoh_teks = "Good morning, let's learn Linear Algebra together."
+
+# Membuat 2 kolom besar untuk kotak ketik teks berdampingan
+kolom_input, kolom_output = st.columns(2)
+
+with kolom_input:
+    st.markdown(f"### 📥 Bahasa Asal: **{label_asal}**")
+    teks_input = st.text_area(
+        "Ketik kata atau kalimat di sini:", 
+        value=contoh_teks,
+        height=150,
+        key="input_area"
     )
 
-# --- PROSES TRANSLASI ---
-hasil_terjemahan = ""
-if kata_input.strip() != "":
+# --- PROSES MESIN TRANSLASI DI LATAR BELAKANG ---
+hasil_translate = ""
+if teks_input.strip() != "":
     try:
-        blob = TextBlob(kata_input)
-        # Menambahkan parameter to='en' untuk menerjemahkan ke Inggris
-        hasil_terjemahan = str(blob.translate(from_lang='id', to='en'))
-    except Exception:
-        # Jika textblob gagal/error, kita gunakan alternatif library bawaan python yang sangat ringan
-        import urllib.request
-        import json
-        try:
-            # Menggunakan API translate cadangan gratis jika TextBlob sibuk
-            url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=id&tl=en&dt=t&q={urllib.parse.quote(kata_input)}"
-            res = urllib.request.urlopen(url).read().decode("utf-8")
-            hasil_terjemahan = json.loads(res)[0][0][0]
-        except Exception:
-            hasil_terjemahan = kata_input
+        # Menggunakan API Google Translate resmi versi publik (Gratis, Cepat & Akurat)
+        url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl={sl}&tl={tl}&dt=t&q={urllib.parse.quote(teks_input)}"
+        
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        response = urllib.request.urlopen(req).read().decode("utf-8")
+        
+        data_json = json.loads(response)
+        
+        # Menggabungkan seluruh teks hasil terjemahan jika kalimatnya panjang
+        hasil_translate = "".join([part[0] for part in data_json[0] if part[0] is not None])
+    except Exception as e:
+        hasil_translate = f"Gagal tersambung ke server: {str(e)}"
 
-with kolom_kanan:
-    st.caption("Inggris (English)")
-    st.info(f"**{hasil_terjemahan.upper()}**")
+with kolom_output:
+    st.markdown(f"### 📤 Hasil Terjemahan: **{label_tujuan}**")
+    # Tampilan kotak output hasil terjemahan yang elegan
+    st.success(hasil_translate if hasil_translate else "Menunggu teks...")
 
 st.write("---")
-st.caption("Sistem mendeteksi teks input secara otomatis dan mentransformasikannya ke dalam ruang makna bahasa tujuan di latar belakang.")
+st.caption("Sistem ini bekerja dengan mentransformasikan representasi string teks ke dalam ruang semantik bahasa target secara otomatis.")
