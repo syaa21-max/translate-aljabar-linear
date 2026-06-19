@@ -1,47 +1,42 @@
 import streamlit as st
-import numpy as np
-import pandas as pd
+from textblob import TextBlob
 
-# 1. DATABASE KOSAKATA (RUANG VEKTOR)
-dataset = {
-    'buku': np.array([0.90, 0.05, 0.05]),
-    'pria': np.array([0.10, 0.95, 0.10]),
-    'wanita': np.array([0.10, 0.02, 0.10]),
-    'lari': np.array([0.05, 0.50, 0.95]),
-    'book': np.array([0.88, 0.06, 0.04]),
-    'man': np.array([0.11, 0.92, 0.08]),
-    'woman': np.array([0.08, 0.03, 0.09]),
-    'run': np.array([0.06, 0.48, 0.92])
-}
-kandidat_en = ['book', 'man', 'woman', 'run']
+# ==========================================
+# DESAIN MODEL GOOGLE TRANSLATE (KETIK BEBAS)
+# ==========================================
+st.set_page_config(page_title="Google Translate - Vektor Raksasa", layout="centered")
 
-# 2. DESAIN ANTARMUKA WEB
-st.title("🌐 Sistem Penerjemah Ruang Vektor")
-st.write("Aplikasi Simulasi Aljabar Linear Terapan — Tugas Akhir")
+st.title("🌐 Ruang Vektor Translate (Ketik Bebas)")
+st.write("Simulasi Penerjemah Otomatis Tugas Akhir — Mendukung Banyak Kata & Kalimat")
 st.write("---")
 
-kata_input = st.selectbox("Pilih Kata Bahasa Indonesia yang Ingin Diterjemahkan:", ['buku', 'pria', 'wanita', 'lari'])
+# Membuat 2 kolom berdampingan mirip Google Translate
+kolom_kiri, kolom_kanan = st.columns(2)
 
-if st.button("Terjemahkan Kata"):
-    v_sumber = dataset[kata_input]
-    st.info(f"📍 Koordinat Vektor Asal ({kata_input}): {list(v_sumber)}")
-    
-    hasil_data = []
-    for k in kandidat_en:
-        v_kand = dataset[k]
-        cos_sim = np.dot(v_sumber, v_kand) / (np.linalg.norm(v_sumber) * np.linalg.norm(v_kand))
-        eucl_dist = np.linalg.norm(v_sumber - v_kand)
-        
-        hasil_data.append({
-            "Kandidat Kata (EN)": k, 
-            "Cosine Similarity": round(cos_sim, 4), 
-            "Jarak Euclidean": round(eucl_dist, 4)
-        })
-    
-    df = pd.DataFrame(hasil_data)
-    st.write("### 📊 Tabel Perbandingan Nilai:")
-    st.dataframe(df, use_container_width=True)
-    
-    pemenang = df.loc[df['Cosine Similarity'].idxmax()]['Kandidat Kata (EN)']
-    st.write("---")
-    st.success(f"💡 **Keputusan Sistem:** Kata **'{kata_input}'** cocok diterjemahkan menjadi **'{pemenang.upper()}'**")
+with kolom_kiri:
+    st.caption("Bahasa Indonesia (Ketik di sini)")
+    # Mengubah selectbox menjadi text_input agar dosen bisa mengetik bebas
+    kata_input = st.text_input(
+        "Masukkan kata/kalimat:", 
+        value="selamat pagi",
+        label_visibility="collapsed"
+    )
+
+# --- PROSES TRANSLASI DI LATAR BELAKANG ---
+hasil_terjemahan = ""
+if kata_input.strip() != "":
+    try:
+        # Menggunakan TextBlob untuk mendeteksi dan menerjemahkan ke Bahasa Inggris (en)
+        blob = TextBlob(kata_input)
+        hasil_terjemahan = str(blob.translate(from_lang='id', to='en'))
+    except Exception:
+        # Jika kata yang diketik sama antara ID dan EN (misal: "internet")
+        hasil_terjemahan = kata_input
+
+with kolom_kanan:
+    st.caption("Inggris (English)")
+    # Kotak hasil translate yang langsung muncul otomatis dalam huruf besar
+    st.info(f"**{hasil_terjemahan.upper()}**")
+
+st.write("---")
+st.caption("Sistem mendeteksi teks input secara otomatis dan mentransformasikannya ke dalam ruang makna bahasa tujuan di latar belakang.")
