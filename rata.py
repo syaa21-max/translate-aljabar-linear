@@ -3,7 +3,7 @@ import urllib.request
 import urllib.parse
 import json
 
-# Set halaman web agar rapi dan responsif
+# Set konfigurasi halaman web
 st.set_page_config(page_title="Penerjemah Ruang Vektor", layout="wide")
 
 st.title("🌐 Ruang Vektor Translate (Instan)")
@@ -14,17 +14,15 @@ st.write("---")
 if 'bahasa_asal' not in st.session_state:
     st.session_state.bahasa_asal = "Indonesia"
 
-# Pilihan Arah Bahasa menggunakan tombol toggle sederhana
-kolom_tombol1, kolom_tombol2 = st.columns([1, 4])
-with kolom_tombol1:
-    if st.button("🔄 Tukar Bahasa"):
-        if st.session_state.bahasa_asal == "Indonesia":
-            st.session_state.bahasa_asal = "Inggris"
-        else:
-            st.session_state.bahasa_asal = "Indonesia"
+# Baris Pilihan Arah Bahasa menggunakan selectbox otomatis
+pilihan = st.selectbox(
+    "Arah Terjemahan Bahasa:",
+    ["Indonesia ke Inggris", "Inggris ke Indonesia"],
+    index=0 if st.session_state.bahasa_asal == "Indonesia" else 1
+)
 
-# Menentukan komponen bahasa berdasarkan pilihan saat ini
-if st.session_state.bahasa_asal == "Indonesia":
+# Set kode bahasa berdasarkan selectbox
+if pilihan == "Indonesia ke Inggris":
     label_asal = "Indonesia"
     label_tujuan = "Inggris"
     sl = "id"
@@ -35,44 +33,41 @@ else:
     sl = "en"
     tl = "id"
 
-# Membuat 2 kolom besar untuk kotak ketik teks berdampingan
+st.write("")
+
+# Membuat 2 kolom besar berdampingan
 kolom_input, kolom_output = st.columns(2)
 
 with kolom_input:
     st.markdown(f"### 📥 Dari: **{label_asal}**")
-    # Menggunakan text_area biasa tanpa tombol pemicu manual
-    teks_input = st.text_area(
-        "Ketik di sini...", 
+    # Menggunakan text_input (bukan text_area) agar deteksi ketikan jauh lebih sensitif dan instan
+    teks_input = st.text_input(
+        "Ketik teks di bawah ini:", 
         value="",
-        height=150,
-        placeholder="Ketik kata atau kalimat yang ingin diterjemahkan...",
-        key="teks_asal"
+        placeholder="Ketik kata yang ingin diterjemahkan langsung...",
+        key="teks_asal_baru"
     )
 
-# --- PROSES MESIN TRANSLASI INSTAN ---
+# --- PROSES TRANSLASI LANGSUNG DI LATAR BELAKANG ---
 hasil_translate = ""
 if teks_input.strip() != "":
     try:
-        # Menggunakan API Google Translate publik gratis
         url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl={sl}&tl={tl}&dt=t&q={urllib.parse.quote(teks_input)}"
         
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         response = urllib.request.urlopen(req).read().decode("utf-8")
         
         data_json = json.loads(response)
-        
-        # Menggabungkan seluruh teks hasil terjemahan
         hasil_translate = "".join([part[0] for part in data_json[0] if part[0] is not None])
     except Exception:
-        hasil_translate = "Menerjemahkan..."
+        hasil_translate = "Sedang menerjemahkan..."
 
 with kolom_output:
     st.markdown(f"### 📤 Ke: **{label_tujuan}**")
-    # Menampilkan hasil di dalam kotak yang elegan secara langsung
     if teks_input.strip() != "":
         st.success(hasil_translate)
     else:
-        st.info("Hasil terjemahan akan muncul di sini secara otomatis...")
+        st.info("Hasil terjemahan otomatis muncul di sini saat Anda mengetik...")
 
 st.write("---")
-st.caption("Sistem mendeteksi perubahan input teks secara langsung dan mentransformasikannya ke dalam ruang bahasa target.")
+st.caption("Sistem mentransformasikan representasi teks ke dalam ruang bahasa target secara otomatis.")
